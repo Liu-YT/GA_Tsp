@@ -1,0 +1,3 @@
+*.txt
+src/__pycache__
+src/io_helper.py
