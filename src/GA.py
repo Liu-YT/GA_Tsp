@@ -1,39 +1,70 @@
 from sys import argv, float_info
 from io_helper import read_tsp, city
 import matplotlib.pyplot as plt
-import re
 import random
 import math
 
 filename = "../assets/ch130.tsp"
 
 # population size
+POPSIZE = 50
 
-POPSIZE = 100
 # max number of generations
-MAXGENS = 1000
+MAXGENS = 100
 
 # probability of crosscover
-PXOVER = 0.7
+PXOVER = 0.9
 
 # probability of mutation
-PMUTATION = 0.1
+PMUTATION = 0.15
 
-# 存储结点的距离 
+# distance
 distance = []
 
 # Initial population
 def initPopulation(cities, numOfCity):
     population = []
-    for i in range(POPSIZE):
-        individual = []
-        j = 0
+    # for _ in range(POPSIZE):
+    #     individual = []
+    #     nextCity = random.randint(0, numOfCity-1)
+    #     individual.append(nextCity)
+    #     for j in range(numOfCity-1):
+    #         if random.random() <= 0.5:
+    #             nextCity = random.randint(0, numOfCity-1)
+    #             while nextCity in individual:
+    #                 nextCity = random.randint(0, numOfCity-1)
+    #             individual.append(nextCity)
+    #         else:
+    #             mixDis = float_info.max 
+    #             bestId = 0
+    #             for k in range(numOfCity):
+    #                 if (k not in individual) and distance[individual[-1]][k] < mixDis:
+    #                     bestId = k
+    #                     mixDis = distance[individual[-1]][k]
+    #             individual.append(bestId)
+    #     population.append(individual[:])
+
+    individual = [i for i in range(numOfCity)]
+    for _ in range(int(POPSIZE * 6 / 10)):
+        random.shuffle(individual)
+        population.append(individual[:])    
+    for _ in range(POPSIZE - len(population)):
+        start = random.randint(0, numOfCity-1)
+        gIndividual = []
+        gIndividual.append(start)
+        j = 1
         while j < numOfCity:
-            index = random.randint(0, numOfCity-1)
-            if index not in individual:
-                individual.append(index)
-                j = j + 1
-        population.append(individual)    
+            mixDis = float_info.max 
+            i, bestId = 0, 0
+            while i < numOfCity:
+                if (i not in gIndividual) and i != gIndividual[-1] and distance[gIndividual[-1]][i] < mixDis:
+                    bestId = i
+                    mixDis = distance[gIndividual[-1]][i]
+                i += 1
+            j = j + 1
+            gIndividual.append(bestId)
+        population.append(gIndividual[:]) 
+    random.shuffle(population)
     return population
 
 # calculate indibidual fitness
@@ -54,7 +85,7 @@ def select(population, numOfCity):
     sumOfFitness = 0.0
 
     # evalute
-    for i in range(len(population)):
+    for i in range(POPSIZE):
         fit = evaluate(population[i])
         fitness.append(1 / fit)
         sumOfFitness += 1 / fit
@@ -85,17 +116,20 @@ def select(population, numOfCity):
 # crossover operation
 def crosscover(population, numOfCity):
     # order crossover
-    for _ in range(POPSIZE):
-        chromosomeFir = random.randint(1, POPSIZE-1)
-        chromosomeSec = random.randint(1, POPSIZE-1)
-        if chromosomeFir == chromosomeSec:
-            continue
+    subPopulation = []
+    for i in range(int(POPSIZE / 2)-1):
         if random.random() <= PXOVER:
+            chromosomeFir = i * 2
+            chromosomeSec = i * 2 + 1
+            # chromosomeFir = random.randint(0, POPSIZE-1)
+            # chromosomeSec = random.randint(0, POPSIZE-1)
+            # while chromosomeFir == chromosomeSec:
+            #     chromosomeSec = random.randint(0, POPSIZE-1)
             start = random.randint(0, numOfCity - 2)
             end = random.randint(start + 1, numOfCity - 1)
             newIndividual_i = []
             newIndividual_j = []
-            j, k = 0, 0
+            k = 0
             for j in range(numOfCity):
                 if j >= start and j < end:
                     newIndividual_i.append(population[chromosomeFir][j])
@@ -107,7 +141,7 @@ def crosscover(population, numOfCity):
                             k += 1
                             break
                         k += 1
-            j, k = 0, 0            
+            k = 0      
             for j in range(numOfCity):
                 if population[chromosomeSec][j] in population[chromosomeFir][start:end]:
                     newIndividual_j.append(population[chromosomeSec][j])
@@ -116,31 +150,41 @@ def crosscover(population, numOfCity):
                         k = end
                     newIndividual_j.append(population[chromosomeFir][k])
                     k += 1
-            population[chromosomeFir] = newIndividual_i[:]
-            population[chromosomeSec] = newIndividual_j[:]
+            subPopulation.append(newIndividual_i[:])
+            subPopulation.append(newIndividual_j[:])
+    
+    # competition
+    subPopulation.sort(key = lambda x: evaluate(x))
+    subPopulation = mutate(subPopulation, numOfCity)
+    subPopulation = localSearch(subPopulation, numOfCity)
+    for i in range(len(subPopulation)):
+        for j in range(POPSIZE):
+            if evaluate(subPopulation[i]) < evaluate(population[j]):
+                population[j] = subPopulation[i]
+                break
+
     return population
 
 # mutation operation
 def mutate(population, numOfCity):
-    for i in range(POPSIZE):
+    for i in range(len(population)):
         if random.random() <= PMUTATION:
             geneFir = random.randint(0,numOfCity-1)
             geneSec = random.randint(0, numOfCity-1)
-            if geneFir != geneSec:
-                temp = population[i][geneFir]
-                population[i][geneFir] = population[i][geneSec]
-                population[i][geneSec] = temp
+            while geneFir == geneSec:
+                geneSec = random.randint(0, numOfCity-1)
+            population[i][geneFir], population[i][geneSec] = population[i][geneSec], population[i][geneFir]
     return population
 
 # local search
 def localSearch(population, numOfCity):
-    for i in range(POPSIZE):
+    for i in range(len(population)):
         best = population[i][:]
         for _ in range(100):
-            first = random.randint(1, numOfCity - 2)
+            first = random.randint(0, numOfCity - 2)
             second = random.randint(first + 1, numOfCity - 1)
             if first != second:
-                population[i][first:second+1] = population[i][second:first-1:-1]
+                population[i][first], population[i][second] = population[i][second], population[i][first]
                 if evaluate(best) > evaluate(population[i]):
                     best = population[i][:]
         population[i] = best[:]
@@ -169,6 +213,16 @@ def main():
         population = crosscover(population, numOfCity)
         # population = mutate(population, numOfCity)
         population = localSearch(population, numOfCity)
+        population.sort(key = lambda x: evaluate(x))
+        print(curGen, evaluate(population[10]), evaluate(population[0]))
+        plt.clf()
+        ax = plt.axes()
+        ax.get_xaxis().set_visible(False)
+        ax.get_yaxis().set_visible(False)
+        for n in range(numOfCity - 1):
+            plt.plot([cities[population[10][n]].x, cities[population[10][n + 1]].x], [cities[population[10][n]].y, cities[population[10][n+1]].y], '-ro')
+        plt.plot([cities[population[10][-1]].x, cities[population[10][0]].x], [cities[population[10][-1]].y, cities[population[10][0]].y], '-ro')    
+        plt.pause(0.001)
         curGen += 1
 
     # find best
@@ -187,7 +241,8 @@ def main():
     ax.get_xaxis().set_visible(False)
     ax.get_yaxis().set_visible(False)
     for n in range(numOfCity - 1):
-        plt.plot([cities[n].x, cities[n+1].x], [cities[n].y, cities[n + 1].y], '-ro')
+        plt.plot([cities[population[0][n]].x, cities[population[0][n + 1]].x], [cities[population[0][n]].y, cities[population[0][n+1]].y], '-ro')
+    plt.plot([cities[population[0][-1]].x, cities[population[0][0]].x], [cities[population[0][-1]].y, cities[population[0][0]].y], '-ro')
     plt.show()
 
 if __name__ == "__main__":
