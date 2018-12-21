@@ -1,4 +1,4 @@
 *.txt
 *.pyc
 src/__pycache__
-src/io_helper.py
+src/io_helper.pyc
