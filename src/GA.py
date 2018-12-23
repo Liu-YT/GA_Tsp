@@ -81,6 +81,7 @@ def initPopulation(cities, numOfCity):
                         i += 1
                     individual.append(nearCity)
         population.append(individual[:])
+    
     random.shuffle(population)
     return population
 
@@ -236,6 +237,7 @@ def main():
         print(curGen, evaluate(population[0]), evaluate(population[POPSIZE-1]))
         plt.clf()
         ax = plt.axes()
+        ax.set_title('Distance: ' + str(evaluate(population[0])))
         ax.get_xaxis().set_visible(False)
         ax.get_yaxis().set_visible(False)
         for n in range(numOfCity - 1):
@@ -250,7 +252,7 @@ def main():
     print(evaluate(population[0]))
     plt.clf()
     ax = plt.axes()
-    ax.set_title('130 city problem (Churritz)')
+    ax.set_title('Distance: ' + str(evaluate(population[0])))
     ax.get_xaxis().set_visible(False)
     ax.get_yaxis().set_visible(False)
     for n in range(numOfCity - 1):
