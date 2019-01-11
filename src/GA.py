@@ -26,11 +26,11 @@ def initPopulation(cities, numOfCity):
     population = []
 
     individual = [i for i in range(numOfCity)]
-    for _ in range(int(POPSIZE * 3 / 10)):
+    for _ in range(int(POPSIZE * 2 / 10)):
         random.shuffle(individual)
         population.append(individual[:])    
 
-    for _ in range(int(POPSIZE * 5 / 10)):
+    for _ in range(int(POPSIZE - len(population))):
         start = random.randint(0, numOfCity-1)
         gIndividual = []
         gIndividual.append(start)
@@ -46,41 +46,6 @@ def initPopulation(cities, numOfCity):
             j = j + 1
             gIndividual.append(bestId)
         population.append(gIndividual[:]) 
-
-    for _ in range(int(POPSIZE - len(population))):
-        individual = []
-        flag = random.random()
-        individual.append(random.randint(0, numOfCity-1))
-        for j in range(numOfCity-1):
-            if flag <= 0.5: 
-                if j < int(numOfCity / 2):
-                    nextCity = random.randint(0, numOfCity-1)
-                    while nextCity in individual:
-                        nextCity = random.randint(0, numOfCity-1)
-                    individual.append(nextCity)
-                else:
-                    mixDis, nearCity, i = float_info.max, 0, 0 
-                    while i < numOfCity:
-                        if i not in individual and distance[individual[-1]][i] < mixDis:
-                            nearCity = i
-                            mixDis = distance[individual[-1]][i]
-                        i += 1
-                    individual.append(nearCity)
-            else:
-                if j >= int(numOfCity / 2):
-                    nextCity = random.randint(0, numOfCity-1)
-                    while nextCity in individual:
-                        nextCity = random.randint(0, numOfCity-1)
-                    individual.append(nextCity)
-                else:
-                    mixDis, nearCity, i = float_info.max, 0, 0 
-                    while i < numOfCity:
-                        if i not in individual and distance[individual[-1]][i] < mixDis:
-                            nearCity = i
-                            mixDis = distance[individual[-1]][i]
-                        i += 1
-                    individual.append(nearCity)
-        population.append(individual[:])
     
     random.shuffle(population)
     return population
@@ -168,7 +133,6 @@ def crosscover(population, numOfCity):
                     k += 1
             subPopulation.append(newIndividual_i[:])
             subPopulation.append(newIndividual_j[:])
-            # population[chromosomeFir], population[chromosomeSec] = newIndividual_i, newIndividual_j
     
     # competition
     subPopulation.sort(key = lambda x: evaluate(x))
@@ -225,16 +189,17 @@ def main():
         distance.append(node)
 
     population = initPopulation(cities, numOfCity)
+
     curGen = 0 
     while curGen < MAXGENS:
         random.shuffle(population)
         population = select(population, numOfCity)
         population = crosscover(population, numOfCity)
         population = mutate(population, numOfCity)
-        # population = localSearch(population, numOfCity)
-        
+        population = localSearch(population, numOfCity)
+
         population.sort(key = lambda x: evaluate(x))
-        print(curGen, evaluate(population[0]), evaluate(population[POPSIZE-1]))
+        print("Current: ", curGen)
         plt.clf()
         ax = plt.axes()
         ax.set_title('Distance: ' + str(evaluate(population[0])))
@@ -248,6 +213,7 @@ def main():
         curGen += 1
 
     # find best
+    population[0].append(population[0][0])
     print(population[0])
     print(evaluate(population[0]))
     plt.clf()
